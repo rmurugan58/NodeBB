@@ -279,42 +279,50 @@ Flags.validate = async function (payload) {
 		user.getUserData(payload.uid),
 	]);
 
-	if (!target) {
-		throw new Error('[[error:invalid-data]]');
-	} else if (target.deleted) {
-		throw new Error('[[error:post-deleted]]');
-	} else if (!reporter || !reporter.userslug) {
-		throw new Error('[[error:no-user]]');
-	} else if (reporter.banned) {
-		throw new Error('[[error:user-banned]]');
-	}
+	// new: Check for target validity
+	if (!target) throw new Error('[[error:invalid-data]]');
+	if (target.deleted) throw new Error('[[error:post-deleted]]');
 
-	// Disallow flagging of profiles/content of privileged users
+	// new: Check for reporter validity
+	if (!reporter || !reporter.userslug) throw new Error('[[error:no-user]]');
+	if (reporter.banned) throw new Error('[[error:user-banned]]');
+
 	const [targetPrivileged, reporterPrivileged] = await Promise.all([
 		user.isPrivileged(target.uid),
 		user.isPrivileged(reporter.uid),
 	]);
+
+	// new: Disallow flagging of privileged users by non-privileged users
 	if (targetPrivileged && !reporterPrivileged) {
 		throw new Error('[[error:cant-flag-privileged]]');
 	}
 
+	// new: Check flagging rules based on payload type
 	if (payload.type === 'post') {
-		const editable = await privileges.posts.canEdit(payload.id, payload.uid);
-		if (!editable.flag && !meta.config['reputation:disabled'] && reporter.reputation < meta.config['min:rep:flag']) {
-			throw new Error(`[[error:not-enough-reputation-to-flag, ${meta.config['min:rep:flag']}]]`);
-		}
+		await validatePostFlag(payload, reporter);
 	} else if (payload.type === 'user') {
-		if (parseInt(payload.id, 10) === parseInt(payload.uid, 10)) {
-			throw new Error('[[error:cant-flag-self]]');
-		}
-		const editable = await privileges.users.canEdit(payload.uid, payload.id);
-		if (!editable && !meta.config['reputation:disabled'] && reporter.reputation < meta.config['min:rep:flag']) {
-			throw new Error(`[[error:not-enough-reputation-to-flag, ${meta.config['min:rep:flag']}]]`);
-		}
+		await validateUserFlag(payload, reporter);
 	} else {
 		throw new Error('[[error:invalid-data]]');
 	}
 };
+
+async function validatePostFlag(payload, reporter) {
+	const editable = await privileges.posts.canEdit(payload.id, payload.uid);
+	if (!editable.flag && !meta.config['reputation:disabled'] && reporter.reputation < meta.config['min:rep:flag']) {
+		throw new Error(`[[error:not-enough-reputation-to-flag, ${meta.config['min:rep:flag']}]]`);
+	}
+}
+
+async function validateUserFlag(payload, reporter) {
+	if (parseInt(payload.id, 10) === parseInt(payload.uid, 10)) {
+		throw new Error('[[error:cant-flag-self]]');
+	}
+	const editable = await privileges.users.canEdit(payload.uid, payload.id);
+	if (!editable && !meta.config['reputation:disabled'] && reporter.reputation < meta.config['min:rep:flag']) {
+		throw new Error(`[[error:not-enough-reputation-to-flag, ${meta.config['min:rep:flag']}]]`);
+	}
+}
 
 Flags.getNotes = async function (flagId) {
 	let notes = await db.getSortedSetRevRangeWithScores(`flag:${flagId}:notes`, 0, -1);
