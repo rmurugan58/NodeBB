@@ -279,11 +279,11 @@ Flags.validate = async function (payload) {
 		user.getUserData(payload.uid),
 	]);
 
-	// new: Check for target validity
+	// new: check for target validity
 	if (!target) throw new Error('[[error:invalid-data]]');
 	if (target.deleted) throw new Error('[[error:post-deleted]]');
 
-	// new: Check for reporter validity
+	// new: check for reporter validity
 	if (!reporter || !reporter.userslug) throw new Error('[[error:no-user]]');
 	if (reporter.banned) throw new Error('[[error:user-banned]]');
 
@@ -297,7 +297,7 @@ Flags.validate = async function (payload) {
 		throw new Error('[[error:cant-flag-privileged]]');
 	}
 
-	// new: Check flagging rules based on payload type
+	// new: check flagging rules based on payload type
 	if (payload.type === 'post') {
 		await validatePostFlag(payload, reporter);
 	} else if (payload.type === 'user') {
