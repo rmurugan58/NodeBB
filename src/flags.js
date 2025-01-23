@@ -273,7 +273,9 @@ Flags.sort = async function (flagIds, sort) {
 	return flagIds;
 };
 
+//refactored function code below
 Flags.validate = async function (payload) {
+	console.log("rathi murugan") //console check
 	const [target, reporter] = await Promise.all([
 		Flags.getTarget(payload.type, payload.id, payload.uid),
 		user.getUserData(payload.uid),
