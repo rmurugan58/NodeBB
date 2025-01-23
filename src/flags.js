@@ -276,7 +276,7 @@ Flags.sort = async function (flagIds, sort) {
 // refactored function code below
 // citation: ChatGPT was referenced and used for the refactoring changes made in the function below
 Flags.validate = async function (payload) {
-	console.log('rathi murugan'); //console check
+	console.log('rathi murugan'); // console check
 	const [target, reporter] = await Promise.all([
 		Flags.getTarget(payload.type, payload.id, payload.uid),
 		user.getUserData(payload.uid),
