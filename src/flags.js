@@ -273,19 +273,20 @@ Flags.sort = async function (flagIds, sort) {
 	return flagIds;
 };
 
-//refactored function code below
+// refactored function code below
+// citation: ChatGPT was referenced and used for the refactoring changes made in the function below
 Flags.validate = async function (payload) {
-	console.log("rathi murugan") //console check
+	console.log('rathi murugan'); //console check
 	const [target, reporter] = await Promise.all([
 		Flags.getTarget(payload.type, payload.id, payload.uid),
 		user.getUserData(payload.uid),
 	]);
 
-	//target validity
+	// target validity
 	if (!target) throw new Error('[[error:invalid-data]]');
 	if (target.deleted) throw new Error('[[error:post-deleted]]');
 
-	//reporter validity
+	// reporter validity
 	if (!reporter || !reporter.userslug) throw new Error('[[error:no-user]]');
 	if (reporter.banned) throw new Error('[[error:user-banned]]');
 
@@ -294,12 +295,12 @@ Flags.validate = async function (payload) {
 		user.isPrivileged(reporter.uid),
 	]);
 
-	//stop flagging of privileged users by non-privileged users
+	// stop flagging of privileged users by non-privileged users
 	if (targetPrivileged && !reporterPrivileged) {
 		throw new Error('[[error:cant-flag-privileged]]');
 	}
 
-	//check flagging rules
+	// check flagging rules
 	if (payload.type === 'post') {
 		await validatePostFlag(payload, reporter);
 	} else if (payload.type === 'user') {
@@ -309,7 +310,7 @@ Flags.validate = async function (payload) {
 	}
 };
 
-//helper functions
+// helper functions
 async function validatePostFlag(payload, reporter) {
 	const editable = await privileges.posts.canEdit(payload.id, payload.uid);
 	if (!editable.flag && !meta.config['reputation:disabled'] && reporter.reputation < meta.config['min:rep:flag']) {
