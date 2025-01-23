@@ -279,11 +279,11 @@ Flags.validate = async function (payload) {
 		user.getUserData(payload.uid),
 	]);
 
-	// new: check for target validity
+	//target validity
 	if (!target) throw new Error('[[error:invalid-data]]');
 	if (target.deleted) throw new Error('[[error:post-deleted]]');
 
-	// new: check for reporter validity
+	//reporter validity
 	if (!reporter || !reporter.userslug) throw new Error('[[error:no-user]]');
 	if (reporter.banned) throw new Error('[[error:user-banned]]');
 
@@ -292,12 +292,12 @@ Flags.validate = async function (payload) {
 		user.isPrivileged(reporter.uid),
 	]);
 
-	// new: Disallow flagging of privileged users by non-privileged users
+	//stop flagging of privileged users by non-privileged users
 	if (targetPrivileged && !reporterPrivileged) {
 		throw new Error('[[error:cant-flag-privileged]]');
 	}
 
-	// new: check flagging rules based on payload type
+	//check flagging rules
 	if (payload.type === 'post') {
 		await validatePostFlag(payload, reporter);
 	} else if (payload.type === 'user') {
@@ -307,6 +307,7 @@ Flags.validate = async function (payload) {
 	}
 };
 
+//helper functions
 async function validatePostFlag(payload, reporter) {
 	const editable = await privileges.posts.canEdit(payload.id, payload.uid);
 	if (!editable.flag && !meta.config['reputation:disabled'] && reporter.reputation < meta.config['min:rep:flag']) {
