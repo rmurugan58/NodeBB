@@ -1187,3 +1187,82 @@ describe('Flags', () => {
 		});
 	});
 });
+
+
+// additional tests to ensure full code coverage for refactored code
+// citation: ChatGPT was referenced and used to formulate the below tests
+
+describe('.validate()', () => {
+    it('should throw an error if the target does not exist', async () => {
+        const uniqueEmail = `testuser${Date.now()}@user.com`;
+        const flaggerId = await User.create({ username: 'testUser', password: 'abcdef', email: uniqueEmail });
+
+        try {
+            await Flags.validate({ type: 'post', id: 99999, uid: flaggerId });
+        } catch (err) {
+            assert.ok(err);
+            assert.strictEqual(err.message, '[[error:invalid-data]]');
+        }
+    });
+
+    it('should throw an error if the target is deleted', async () => {
+        const uniqueEmail = `deletetest${Date.now()}@user.com`;
+        const flaggerId = await User.create({ username: 'testUser', password: 'abcdef', email: uniqueEmail });
+        const postId = await Posts.create({ uid: flaggerId, content: 'test content' });
+        await Posts.delete(postId, flaggerId);
+
+        try {
+            await Flags.validate({ type: 'post', id: postId, uid: flaggerId });
+        } catch (err) {
+            assert.ok(err);
+            assert.strictEqual(err.message, '[[error:post-deleted]]');
+        }
+    });
+
+    it('should throw an error if the reporter does not exist or has no userslug', async () => {
+        try {
+            await Flags.validate({ type: 'post', id: 1, uid: 99999 });
+        } catch (err) {
+            assert.ok(err);
+            assert.strictEqual(err.message, '[[error:no-user]]');
+        }
+    });
+
+
+    it('should throw an error if a non-privileged user tries to flag a privileged user', async () => {
+        const privEmail = `privileged${Date.now()}@user.com`;
+        const regEmail = `regular${Date.now()}@user.com`;
+        const privilegedUserId = await User.create({ username: 'privilegedUser', password: 'abcdef', email: privEmail });
+        const regularUserId = await User.create({ username: 'regularUser', password: 'abcdef', email: regEmail });
+
+        await Groups.join('administrators', privilegedUserId);
+
+        try {
+            await Flags.validate({ type: 'user', id: privilegedUserId, uid: regularUserId });
+        } catch (err) {
+            assert.ok(err);
+            assert.strictEqual(err.message, '[[error:cant-flag-privileged]]');
+        }
+
+        await Groups.leave('administrators', privilegedUserId);
+    });
+});
+
+describe('.validate()', () => {
+    it('should not allow a user to flag themselves', async () => {
+        const uniqueEmail = `selfflag${Date.now()}@user.com`;
+        const userId = await User.create({ username: 'selfFlagger', password: 'abcdef', email: uniqueEmail });
+
+        try {
+            await Flags.validate({
+                type: 'user',
+                id: userId,
+                uid: userId,
+            });
+        } catch (err) {
+            assert.ok(err);
+            assert.strictEqual(err.message, '[[error:cant-flag-self]]');
+        }
+    });
+
+});
